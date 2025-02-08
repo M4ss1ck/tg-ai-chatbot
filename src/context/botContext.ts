@@ -1,5 +1,5 @@
 import type { Context, SessionFlavor } from "grammy";
-import { aiModels } from "../config";
+import { aiModels, aiPrompts } from "../config";
 
 export interface Model {
     model: string
@@ -40,7 +40,7 @@ export function initial(): SessionData {
         history: [],
         initialPrompt: {
             role: "system",
-            content: "You are a helpful assistant."
+            content: aiPrompts[0].text
         }
     }
 } 
