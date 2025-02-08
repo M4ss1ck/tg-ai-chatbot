@@ -17,6 +17,7 @@ bot.use(ai)
 
 bot.start({
     allowed_updates: API_CONSTANTS.ALL_UPDATE_TYPES,
+    drop_pending_updates: true,
 });
 
 bot.catch((err) => {
