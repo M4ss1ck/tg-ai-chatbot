@@ -1,6 +1,7 @@
 export const token = process.env.BOT_TOKEN;
 export const adminId = process.env.ADMIN_ID;
 export const apiKey = process.env.OPENROUTER_API_KEY;
+export const redisUrl = process.env.REDIS_URL;
 
 export const aiModels = [
     {

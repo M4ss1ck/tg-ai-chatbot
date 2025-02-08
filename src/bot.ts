@@ -3,6 +3,7 @@ import { token } from "./config";
 import ai from "./composers/ai";
 import start from "./composers/start";
 import { BotContext, initial } from "./context/botContext";
+import { storage } from "./storage/redis";
 
 if (!token) {
     throw new Error("BOT_TOKEN is not set");
@@ -10,7 +11,7 @@ if (!token) {
 
 const bot = new Bot<BotContext>(token)
 
-bot.use(session({ initial }))
+bot.use(session({ initial, storage }));
 bot.use(start)
 bot.use(ai)
 
