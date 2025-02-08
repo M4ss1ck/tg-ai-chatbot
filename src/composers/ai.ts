@@ -19,6 +19,16 @@ ai.command("info", async (ctx) => {
     await ctx.reply(`Your are currently using ${model}`)
 })
 
+ai.command("reset", async (ctx) => {
+    await ctx.reply("Resetting history...")
+    ctx.session.history = []
+    ctx.session.initialPrompt = {
+        role: "system",
+        content: "You are a helpful assistant."
+    }
+    await ctx.reply("History reset.")
+})
+
 ai.callbackQuery(/set_model_(\d+)/i, async ctx => {
     if ('data' in ctx.callbackQuery && ctx.from?.id) {
         await ctx.answerCallbackQuery().catch(console.log)
@@ -31,9 +41,9 @@ ai.callbackQuery(/set_model_(\d+)/i, async ctx => {
 })
 
 
-// ai.command(["ai", "ia"], async (ctx) => {
-//     await processCommand(ctx, ctx.match)
-// });
+ai.command("ask", async (ctx) => {
+    await processCommand(ctx, ctx.match)
+});
 
 ai.on("message", async (ctx) => {
     if (ctx.msg.reply_to_message?.from?.id === ctx.me.id || ctx.chat.type === "private") {
