@@ -7,11 +7,28 @@ export interface Model {
     image: boolean
 }
 
+export interface TextContent {
+    role: string
+    text: string
+}
+
+export interface ImageContent {
+    type: string
+    image_url: {
+        url: string
+    }
+}
+
+export type Message = {
+    role: string
+    content: TextContent | ImageContent | string
+}
+
 interface SessionData {
     model: Model
     availableModels: Model[]
-    history: string[]
-    initialPrompt: string
+    history: Message[]
+    initialPrompt: Message
 }
 
 export type BotContext = Context & SessionFlavor<SessionData>;
@@ -21,6 +38,9 @@ export function initial(): SessionData {
         model: aiModels[0],
         availableModels: aiModels,
         history: [],
-        initialPrompt: ""
+        initialPrompt: {
+            role: "system",
+            content: "You are a helpful assistant."
+        }
     }
 } 
