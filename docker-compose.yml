@@ -7,13 +7,5 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-    env_file:
-      - .env
     volumes:
       - ./.env:/app/.env # Mount the local .env file into the container
-    networks:
-      - tg-network
-
-networks:
-  tg-network:
-    driver: bridge

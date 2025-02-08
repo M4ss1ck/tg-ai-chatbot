@@ -28,4 +28,4 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY package.json ./
 
 # Start the application
-CMD ["node", "--env-file=.env", "./dist/bot.js"]
+CMD ["npm", "run", "start"]
