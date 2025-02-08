@@ -1,0 +1,23 @@
+{
+  "name": "tg-ai-chatbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false --env-file=.env ./src/bot.ts",
+    "build": "tsc -p ./tsconfig.json",
+    "start": "node --env-file=.env ./dist/bot.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "grammy": "^1.34.1"
+  },
+  "devDependencies": {
+    "@types/node": "22",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
