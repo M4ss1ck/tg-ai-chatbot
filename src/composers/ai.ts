@@ -31,9 +31,9 @@ ai.callbackQuery(/set_model_(\d+)/i, async ctx => {
 })
 
 
-ai.command(["ai", "ia"], async (ctx) => {
-    await processCommand(ctx, ctx.match)
-});
+// ai.command(["ai", "ia"], async (ctx) => {
+//     await processCommand(ctx, ctx.match)
+// });
 
 ai.on("message", async (ctx) => {
     if (ctx.msg.reply_to_message?.from?.id === ctx.me.id || ctx.chat.type === "private") {
