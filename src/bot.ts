@@ -1,6 +1,7 @@
 import { Bot, API_CONSTANTS, GrammyError, HttpError, session } from "grammy";
 import { token } from "./config";
 import ai from "./composers/ai";
+import start from "./composers/start";
 import { BotContext, initial } from "./context/botContext";
 
 if (!token) {
@@ -9,24 +10,8 @@ if (!token) {
 
 const bot = new Bot<BotContext>(token)
 
-bot.command("start", async (ctx) => {
-    await ctx.reply("¡Hola!")
-})
-
-bot.on("message", async (ctx, next) => {
-    await ctx.react("👀")
-    await next()
-})
-
-
-bot.on("message_reaction", async (ctx) => {
-    const { emojiAdded } = ctx.reactions();
-    if (emojiAdded.includes("🎉")) {
-        await ctx.reply("party");
-    }
-});
-
 bot.use(session({ initial }))
+bot.use(start)
 bot.use(ai)
 
 bot.start({
