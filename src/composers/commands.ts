@@ -7,7 +7,7 @@ import { processCommand } from "../utils/ai.js";
 const aiCommands = new CommandGroup<BotContext>();
 
 aiCommands.command("model", "Select your AI model", async (ctx) => {
-    const text = `Select your AI model:\n${aiModels.map(model => `- ${model.name} (${model.model})`).join('\n')}`
+    const text = "Select your AI model"
     const buttons = aiModels.map((model, index) => [InlineKeyboard.text(model.name, `set_model_${index}`)])
     const keyboard = InlineKeyboard.from(buttons)
     await ctx.reply(text, {
