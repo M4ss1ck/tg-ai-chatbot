@@ -34,4 +34,23 @@ aiCommands.command("ask", "Ask AI", async (ctx) => {
     await processCommand(ctx, ctx.match)
 });
 
+aiCommands.command("prompt", "Change initial prompt", async (ctx) => {
+    if (ctx.match.length === 0) {
+        const text = `Change initial prompt:\n${aiPrompts.map(prompt => `- ${prompt.name}`).join('\n')}`
+        const buttons = aiPrompts.map((prompt, index) => [InlineKeyboard.text(prompt.name, `set_prompt_${index}`)])
+        const keyboard = InlineKeyboard.from(buttons)
+        await ctx.reply(text, {
+            reply_markup: keyboard
+        })
+    } else {
+        const prompt = ctx.match
+        ctx.session.history = []
+        ctx.session.initialPrompt = {
+            role: "system",
+            content: prompt
+        }
+        await ctx.reply(`History reset. Initial prompt set to:\n${prompt}`)
+    }
+})
+
 export default aiCommands;
