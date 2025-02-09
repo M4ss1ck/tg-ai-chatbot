@@ -21,7 +21,7 @@ export interface ImageContent {
 
 export type Message = {
     role: string
-    content: TextContent | ImageContent | string
+    content: (TextContent | ImageContent)[] | string
 }
 
 interface SessionData {

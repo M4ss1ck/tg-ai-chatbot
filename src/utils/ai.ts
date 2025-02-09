@@ -86,8 +86,10 @@ export const processCommand = async (ctx: BotContext, message: string) => {
                 })
             }
         }
-        console.log("\n===========================\n")
-        console.log(content)
+        ctx.session.history.push({
+            role: "user",
+            content,
+        })
 
         const res = await axios.post("https://openrouter.ai/api/v1/chat/completions",
             {
