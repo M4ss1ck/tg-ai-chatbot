@@ -1,5 +1,5 @@
-import type { BotContext } from "../context/botContext";
-import { apiKey, aiModels, token } from "../config";
+import type { BotContext } from "../context/botContext.js";
+import { apiKey, aiModels, token } from "../config/index.js";
 import axios from "axios";
 
 export const processCommand = async (ctx: BotContext, message: string) => {

@@ -1,9 +1,11 @@
 import { Bot, API_CONSTANTS, GrammyError, HttpError, session } from "grammy";
-import { token } from "./config";
-import ai from "./composers/ai";
-import start from "./composers/start";
-import { BotContext, initial } from "./context/botContext";
-import { storage } from "./storage/redis";
+import { token } from "./config/index.js";
+import aiCommands from "./composers/commands.js";
+import aiActions from "./composers/actions.js";
+import aiFilter from "./composers/filter.js";
+import start from "./composers/start.js";
+import { BotContext, initial } from "./context/botContext.js";
+import { storage } from "./storage/redis.js";
 
 if (!token) {
     throw new Error("BOT_TOKEN is not set");
@@ -13,7 +15,11 @@ const bot = new Bot<BotContext>(token)
 
 bot.use(session({ initial, storage }));
 bot.use(start)
-bot.use(ai)
+bot.use(aiCommands)
+bot.use(aiActions)
+bot.use(aiFilter)
+
+await aiCommands.setCommands(bot)
 
 bot.start({
     allowed_updates: API_CONSTANTS.ALL_UPDATE_TYPES,

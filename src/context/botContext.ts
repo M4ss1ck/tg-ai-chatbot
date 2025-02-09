@@ -1,5 +1,5 @@
 import type { Context, SessionFlavor } from "grammy";
-import { aiModels, aiPrompts } from "../config";
+import { aiModels, aiPrompts } from "../config/index.js";
 
 export interface Model {
     model: string

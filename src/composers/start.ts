@@ -1,6 +1,5 @@
 import { Composer } from "grammy";
-import { BotContext } from "../context/botContext";
-import { processCommand } from "../utils/ai";
+import { BotContext } from "../context/botContext.js";
 
 const start = new Composer<BotContext>();
 
