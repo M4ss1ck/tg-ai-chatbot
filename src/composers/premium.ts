@@ -16,7 +16,7 @@ function isAuthorized(ctx: BotContext): boolean {
 }
 
 /**
- * Validate user ID format
+ * Validate user ID format (basic check for callback queries)
  */
 function isValidUserId(userId: string): boolean {
     return /^\d+$/.test(userId) && userId.length > 0;
@@ -53,27 +53,37 @@ premiumAdminCommands.command("addpremium", "Add premium user (Admin only)", asyn
         const userIdToAdd = getUserIdFromContext(ctx);
 
         if (!userIdToAdd) {
-            await ctx.reply("❌ Please provide a user ID or reply to a user's message. Usage: /addpremium <user_id> or reply to a message with /addpremium");
+            await ctx.reply("❌ Please provide a user ID or reply to a user's message.\n\n**Usage:**\n• `/addpremium <user_id>`\n• Reply to a message with `/addpremium`\n\n**Example:** `/addpremium 123456789`");
             return;
         }
 
-        // Validate user ID format
-        if (!isValidUserId(userIdToAdd)) {
-            await ctx.reply("❌ Invalid user ID format. Please provide a valid numeric user ID.");
-            return;
-        }
-
-        // Add user to premium list
+        // Add user to premium list (validation is now handled in the service)
         const wasAdded = await premiumService.instance.addPremiumUser(userIdToAdd);
 
         if (wasAdded) {
-            await ctx.reply(`✅ User ${userIdToAdd} has been added to premium users.`);
+            await ctx.reply(`✅ **Success!** User ${userIdToAdd} has been added to premium users.`);
         } else {
-            await ctx.reply(`ℹ️ User ${userIdToAdd} is already a premium user.`);
+            await ctx.reply(`ℹ️ **Already Premium:** User ${userIdToAdd} is already a premium user.`);
         }
     } catch (error) {
         console.error("Error in addpremium command:", error);
-        await ctx.reply("❌ An error occurred while adding the premium user. Please try again later.");
+
+        // Handle specific error types
+        if (error instanceof Error) {
+            if (error.message.includes('User ID must contain only numeric characters')) {
+                await ctx.reply("❌ **Invalid User ID:** Please provide a valid numeric user ID (e.g., 123456789).");
+            } else if (error.message.includes('User ID must be between')) {
+                await ctx.reply("❌ **Invalid User ID:** User ID must be between 1 and 20 characters long.");
+            } else if (error.message.includes('Premium service temporarily unavailable')) {
+                await ctx.reply("❌ **Service Unavailable:** Premium service is temporarily unavailable. Please try again in a few moments.");
+            } else if (error.message.includes('Premium features are temporarily unavailable')) {
+                await ctx.reply("❌ **Database Connection Error:** Unable to connect to the premium database. Please contact the administrator if this persists.");
+            } else {
+                await ctx.reply(`❌ **Error:** ${error.message}`);
+            }
+        } else {
+            await ctx.reply("❌ **Unknown Error:** An unexpected error occurred while adding the premium user. Please try again later.");
+        }
     }
 });
 
@@ -89,27 +99,37 @@ premiumAdminCommands.command("removepremium", "Remove premium user (Admin only)"
         const userIdToRemove = getUserIdFromContext(ctx);
 
         if (!userIdToRemove) {
-            await ctx.reply("❌ Please provide a user ID or reply to a user's message. Usage: /removepremium <user_id> or reply to a message with /removepremium");
+            await ctx.reply("❌ Please provide a user ID or reply to a user's message.\n\n**Usage:**\n• `/removepremium <user_id>`\n• Reply to a message with `/removepremium`\n\n**Example:** `/removepremium 123456789`");
             return;
         }
 
-        // Validate user ID format
-        if (!isValidUserId(userIdToRemove)) {
-            await ctx.reply("❌ Invalid user ID format. Please provide a valid numeric user ID.");
-            return;
-        }
-
-        // Remove user from premium list
+        // Remove user from premium list (validation is now handled in the service)
         const wasRemoved = await premiumService.instance.removePremiumUser(userIdToRemove);
 
         if (wasRemoved) {
-            await ctx.reply(`✅ User ${userIdToRemove} has been removed from premium users.`);
+            await ctx.reply(`✅ **Success!** User ${userIdToRemove} has been removed from premium users.`);
         } else {
-            await ctx.reply(`ℹ️ User ${userIdToRemove} was not a premium user.`);
+            await ctx.reply(`ℹ️ **Not Premium:** User ${userIdToRemove} was not a premium user.`);
         }
     } catch (error) {
         console.error("Error in removepremium command:", error);
-        await ctx.reply("❌ An error occurred while removing the premium user. Please try again later.");
+
+        // Handle specific error types
+        if (error instanceof Error) {
+            if (error.message.includes('User ID must contain only numeric characters')) {
+                await ctx.reply("❌ **Invalid User ID:** Please provide a valid numeric user ID (e.g., 123456789).");
+            } else if (error.message.includes('User ID must be between')) {
+                await ctx.reply("❌ **Invalid User ID:** User ID must be between 1 and 20 characters long.");
+            } else if (error.message.includes('Premium service temporarily unavailable')) {
+                await ctx.reply("❌ **Service Unavailable:** Premium service is temporarily unavailable. Please try again in a few moments.");
+            } else if (error.message.includes('Premium features are temporarily unavailable')) {
+                await ctx.reply("❌ **Database Connection Error:** Unable to connect to the premium database. Please contact the administrator if this persists.");
+            } else {
+                await ctx.reply(`❌ **Error:** ${error.message}`);
+            }
+        } else {
+            await ctx.reply("❌ **Unknown Error:** An unexpected error occurred while removing the premium user. Please try again later.");
+        }
     }
 });
 
@@ -128,7 +148,7 @@ premiumAdminCommands.command("listpremium", "List all premium users (Admin only)
             const keyboard = InlineKeyboard.from([
                 [InlineKeyboard.text("➕ Add Premium User", "premium_add_prompt")]
             ]);
-            await ctx.reply("📋 No premium users found.", {
+            await ctx.reply("📋 **No Premium Users Found**\n\nThere are currently no premium users in the system.", {
                 reply_markup: keyboard
             });
         } else {
@@ -151,13 +171,25 @@ premiumAdminCommands.command("listpremium", "List all premium users (Admin only)
 
             const keyboard = InlineKeyboard.from(buttons);
 
-            await ctx.reply(`📋 Premium Users (${premiumUsers.length}):\n\n${userList}\n\n💡 Click on a user to remove them or add a new premium user:`, {
+            await ctx.reply(`📋 **Premium Users (${premiumUsers.length}):**\n\n${userList}\n\n💡 Click on a user to remove them or add a new premium user:`, {
                 reply_markup: keyboard
             });
         }
     } catch (error) {
         console.error("Error in listpremium command:", error);
-        await ctx.reply("❌ An error occurred while retrieving the premium users list. Please try again later.");
+
+        // Handle specific error types
+        if (error instanceof Error) {
+            if (error.message.includes('Premium service temporarily unavailable')) {
+                await ctx.reply("❌ **Service Unavailable:** Premium service is temporarily unavailable. Please try again in a few moments.");
+            } else if (error.message.includes('Premium features are temporarily unavailable')) {
+                await ctx.reply("❌ **Database Connection Error:** Unable to connect to the premium database. Please contact the administrator if this persists.");
+            } else {
+                await ctx.reply(`❌ **Error:** ${error.message}`);
+            }
+        } else {
+            await ctx.reply("❌ **Unknown Error:** An unexpected error occurred while retrieving the premium users list. Please try again later.");
+        }
     }
 });
 
@@ -212,7 +244,7 @@ premiumCallbacks.callbackQuery(/^premium_remove_(\d+)$/, async (ctx) => {
                 const keyboard = InlineKeyboard.from([
                     [InlineKeyboard.text("➕ Add Premium User", "premium_add_prompt")]
                 ]);
-                await ctx.editMessageText("📋 No premium users found.\n\n✅ User removed successfully!", {
+                await ctx.editMessageText("📋 **No Premium Users Found**\n\n✅ User removed successfully!", {
                     reply_markup: keyboard
                 });
             } else {
@@ -232,7 +264,7 @@ premiumCallbacks.callbackQuery(/^premium_remove_(\d+)$/, async (ctx) => {
                 buttons.push([InlineKeyboard.text("➕ Add Premium User", "premium_add_prompt")]);
                 const keyboard = InlineKeyboard.from(buttons);
 
-                await ctx.editMessageText(`📋 Premium Users (${premiumUsers.length}):\n\n${userList}\n\n✅ User ${userIdToRemove} removed successfully!\n\n💡 Click on a user to remove them or add a new premium user:`, {
+                await ctx.editMessageText(`📋 **Premium Users (${premiumUsers.length}):**\n\n${userList}\n\n✅ User ${userIdToRemove} removed successfully!\n\n💡 Click on a user to remove them or add a new premium user:`, {
                     reply_markup: keyboard
                 });
             }
@@ -241,7 +273,19 @@ premiumCallbacks.callbackQuery(/^premium_remove_(\d+)$/, async (ctx) => {
         }
     } catch (error) {
         console.error("Error in premium_remove callback:", error);
-        await ctx.answerCallbackQuery("❌ An error occurred while removing the premium user.");
+
+        // Handle specific error types for callback queries
+        if (error instanceof Error) {
+            if (error.message.includes('Premium service temporarily unavailable')) {
+                await ctx.answerCallbackQuery("❌ Service temporarily unavailable. Please try again later.");
+            } else if (error.message.includes('Premium features are temporarily unavailable')) {
+                await ctx.answerCallbackQuery("❌ Database connection error. Please contact administrator.");
+            } else {
+                await ctx.answerCallbackQuery("❌ An error occurred while removing the premium user.");
+            }
+        } else {
+            await ctx.answerCallbackQuery("❌ An error occurred while removing the premium user.");
+        }
     }
 });
 

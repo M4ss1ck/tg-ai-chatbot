@@ -12,7 +12,9 @@ const mockRedis = {
     srem: vi.fn(),
     sismember: vi.fn(),
     smembers: vi.fn(),
-    quit: vi.fn()
+    quit: vi.fn(),
+    connect: vi.fn(),
+    on: vi.fn(),
 }
 
 // Mock ioredis
@@ -59,7 +61,13 @@ describe('PremiumService', () => {
         it('should handle Redis errors', async () => {
             mockRedis.sadd.mockRejectedValue(new Error('Redis connection failed'))
 
-            await expect(premiumService.addPremiumUser('123456')).rejects.toThrow('Redis connection failed')
+            await expect(premiumService.addPremiumUser('123456')).rejects.toThrow('Premium service error: Redis connection failed')
+        })
+
+        it('should validate user ID format', async () => {
+            await expect(premiumService.addPremiumUser('')).rejects.toThrow('User ID is required and must be a string')
+            await expect(premiumService.addPremiumUser('abc')).rejects.toThrow('User ID must contain only numeric characters')
+            await expect(premiumService.addPremiumUser('123456789012345678901')).rejects.toThrow('User ID must be between 1 and 20 characters long')
         })
     })
 
@@ -86,7 +94,13 @@ describe('PremiumService', () => {
         it('should handle Redis errors', async () => {
             mockRedis.srem.mockRejectedValue(new Error('Redis connection failed'))
 
-            await expect(premiumService.removePremiumUser('123456')).rejects.toThrow('Redis connection failed')
+            await expect(premiumService.removePremiumUser('123456')).rejects.toThrow('Premium service error: Redis connection failed')
+        })
+
+        it('should validate user ID format', async () => {
+            await expect(premiumService.removePremiumUser('')).rejects.toThrow('User ID is required and must be a string')
+            await expect(premiumService.removePremiumUser('abc')).rejects.toThrow('User ID must contain only numeric characters')
+            await expect(premiumService.removePremiumUser('123456789012345678901')).rejects.toThrow('User ID must be between 1 and 20 characters long')
         })
     })
 
@@ -110,10 +124,34 @@ describe('PremiumService', () => {
             expect(mockRedis.sismember).toHaveBeenCalledWith('premium_users', '123456')
         })
 
-        it('should handle Redis errors', async () => {
+        it('should handle Redis errors gracefully and return false', async () => {
             mockRedis.sismember.mockRejectedValue(new Error('Redis connection failed'))
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { })
 
-            await expect(premiumService.isPremiumUser('123456')).rejects.toThrow('Redis connection failed')
+            const result = await premiumService.isPremiumUser('123456')
+
+            expect(result).toBe(false)
+            expect(consoleSpy).toHaveBeenCalledWith(
+                'Error checking premium status for user 123456:',
+                expect.any(Error)
+            )
+
+            consoleSpy.mockRestore()
+        })
+
+        it('should validate user ID format and return false on invalid input', async () => {
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { })
+
+            const result1 = await premiumService.isPremiumUser('')
+            const result2 = await premiumService.isPremiumUser('abc')
+            const result3 = await premiumService.isPremiumUser('123456789012345678901')
+
+            expect(result1).toBe(false)
+            expect(result2).toBe(false)
+            expect(result3).toBe(false)
+            expect(consoleSpy).toHaveBeenCalledTimes(3)
+
+            consoleSpy.mockRestore()
         })
     })
 
@@ -141,7 +179,7 @@ describe('PremiumService', () => {
         it('should handle Redis errors', async () => {
             mockRedis.smembers.mockRejectedValue(new Error('Redis connection failed'))
 
-            await expect(premiumService.listPremiumUsers()).rejects.toThrow('Redis connection failed')
+            await expect(premiumService.listPremiumUsers()).rejects.toThrow('Premium service error: Redis connection failed')
         })
     })
 

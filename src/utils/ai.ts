@@ -202,68 +202,134 @@ export const processCommand = async (ctx: BotContext, message: string) => {
             content,
         })
 
-        // Handle different API endpoints based on provider
+        // Handle different API endpoints based on provider with fallback logic
         const modelObj = aiModels.find(ai => ai.model === model);
         const provider = modelObj?.provider || "openrouter";
 
         let apiUrl: string;
         let headers: any;
         let requestBody: any;
+        let fallbackAttempted = false;
 
-        if (provider === "cloudflare") {
-            if (!cloudflareApiToken || !cloudflareAccountId) {
-                await ctx.reply("Cloudflare API credentials not configured. Please contact the bot owner.", {
-                    reply_to_message_id: ctx.msg.message_id,
-                });
-                return;
+        const attemptApiCall = async (currentModel: string, currentProvider: string): Promise<any> => {
+            if (currentProvider === "cloudflare") {
+                if (!cloudflareApiToken || !cloudflareAccountId) {
+                    throw new Error("Cloudflare API credentials not configured");
+                }
+
+                // Cloudflare API structure
+                apiUrl = `https://api.cloudflare.com/client/v4/accounts/${cloudflareAccountId}/ai/run/${currentModel}`;
+                headers = {
+                    "Authorization": `Bearer ${cloudflareApiToken}`,
+                    "Content-Type": "application/json"
+                };
+
+                // Cloudflare doesn't include model in request body, only messages
+                requestBody = {
+                    messages: [
+                        ...ctx.session.history,
+                        {
+                            role: "user",
+                            content,
+                        }
+                    ]
+                };
+
+                console.log(`Using Cloudflare model: ${currentModel}`);
+            } else {
+                // Default to OpenRouter API
+                apiUrl = "https://openrouter.ai/api/v1/chat/completions";
+                headers = {
+                    "Authorization": `Bearer ${apiKey}`,
+                    "Content-Type": "application/json"
+                };
+
+                requestBody = {
+                    model: currentModel,
+                    messages: [
+                        ...ctx.session.history,
+                        {
+                            role: "user",
+                            content,
+                        }
+                    ]
+                };
             }
 
-            // Cloudflare API structure
-            apiUrl = `https://api.cloudflare.com/client/v4/accounts/${cloudflareAccountId}/ai/run/${model}`;
-            headers = {
-                "Authorization": `Bearer ${cloudflareApiToken}`,
-                "Content-Type": "application/json"
-            };
+            return await axios.post(apiUrl, requestBody, {
+                headers,
+                timeout: 30000, // 30 second timeout
+            });
+        };
 
-            // Cloudflare doesn't include model in request body, only messages
-            requestBody = {
-                messages: [
-                    ...ctx.session.history,
-                    {
-                        role: "user",
-                        content,
+        let res: any;
+        let finalModel = model;
+        let finalProvider = provider;
+
+        try {
+            res = await attemptApiCall(model, provider);
+        } catch (error) {
+            console.error(`Primary model ${model} failed:`, error);
+
+            // Attempt fallback to a free model if the current model is premium and failed
+            if (modelObj?.premium && !fallbackAttempted) {
+                fallbackAttempted = true;
+
+                // Find a suitable fallback model
+                const userId = ctx.from?.id?.toString();
+                const isAdmin = adminId && userId === adminId;
+                let isPremium = isAdmin;
+
+                if (!isAdmin && userId) {
+                    try {
+                        isPremium = await premiumService.instance.isPremiumUser(userId);
+                    } catch (premiumError) {
+                        console.error("Error checking premium status for fallback:", premiumError);
+                        isPremium = false;
                     }
-                ]
-            };
+                }
 
-            console.log(`Using Cloudflare model: ${model}`);
-        } else {
-            // Default to OpenRouter API
-            apiUrl = "https://openrouter.ai/api/v1/chat/completions";
-            headers = {
-                "Authorization": `Bearer ${apiKey}`,
-                "Content-Type": "application/json"
-            };
+                // Find the best fallback model
+                const fallbackModel = aiModels.find(ai =>
+                    !ai.premium && // Must be free
+                    (!content.some(c => c.type === "image_url") || ai.image) // Must support images if needed
+                );
 
-            requestBody = {
-                model,
-                messages: [
-                    ...ctx.session.history,
-                    {
-                        role: "user",
-                        content,
+                if (fallbackModel) {
+                    console.log(`Falling back to model: ${fallbackModel.model}`);
+                    finalModel = fallbackModel.model;
+                    finalProvider = fallbackModel.provider || "openrouter";
+                    ctx.session.model = fallbackModel;
+
+                    try {
+                        res = await attemptApiCall(finalModel, finalProvider);
+
+                        // Notify user about the fallback
+                        await ctx.reply(
+                            `⚠️ The premium model "${modelObj.name}" is currently unavailable. I've switched to "${fallbackModel.name}" for this request.`,
+                            { reply_to_message_id: ctx.msg.message_id }
+                        );
+                    } catch (fallbackError) {
+                        console.error(`Fallback model ${finalModel} also failed:`, fallbackError);
+                        throw new Error("Both primary and fallback models are currently unavailable. Please try again later.");
                     }
-                ]
-            };
+                } else {
+                    throw new Error("Premium model is unavailable and no suitable fallback model found.");
+                }
+            } else {
+                // Re-throw the original error if no fallback is possible
+                throw error;
+            }
         }
 
-        const res = await axios.post(apiUrl, requestBody, { headers });
-
-        const aiResponse = res.data?.choices?.[0].message.content;
+        const aiResponse = res.data?.choices?.[0]?.message?.content;
         console.log("\n===========================\n")
         console.log(aiResponse)
 
-        if (!aiResponse || typeof aiResponse !== 'string') throw new Error("No response from AI (Timeout?)");
+        if (!aiResponse || typeof aiResponse !== 'string') {
+            throw new Error("No response from AI model. The service may be temporarily unavailable.");
+        }
+
         ctx.session.history.push({
             role: "assistant",
             content: aiResponse
@@ -293,9 +359,39 @@ export const processCommand = async (ctx: BotContext, message: string) => {
             });
         }
     } catch (error) {
-        console.error("Error calling OpenRouter API:", error);
-        const msg = typeof error === 'object' && error && 'description' in error ? error.description as string : "Sorry, there was an error processing your request."
-        await ctx.reply(msg, {
+        console.error("Error in AI processing:", error);
+
+        let errorMessage = "Sorry, there was an error processing your request.";
+
+        if (error instanceof Error) {
+            if (error.message.includes("Both primary and fallback models are currently unavailable")) {
+                errorMessage = "🚫 **Service Unavailable**\n\nBoth the primary and backup AI models are currently unavailable. Please try again in a few minutes.";
+            } else if (error.message.includes("Premium model is unavailable and no suitable fallback model found")) {
+                errorMessage = "🚫 **Premium Model Unavailable**\n\nThe premium model you selected is currently unavailable and no suitable backup model was found. Please try selecting a different model using /model.";
+            } else if (error.message.includes("No response from AI model")) {
+                errorMessage = "⏱️ **No Response**\n\nThe AI model didn't respond. This might be due to high server load. Please try again.";
+            } else if (error.message.includes("Cloudflare API credentials not configured")) {
+                errorMessage = "⚙️ **Configuration Error**\n\nCloudflare API credentials are not properly configured. Please contact the bot administrator.";
+            } else if (error.message.includes("Premium service temporarily unavailable")) {
+                errorMessage = "🔧 **Premium Service Unavailable**\n\nThe premium user verification service is temporarily unavailable. Please try again later.";
+            } else if (error.message.includes("timeout")) {
+                errorMessage = "⏱️ **Request Timeout**\n\nThe AI model took too long to respond. Please try again with a shorter message or try a different model.";
+            } else if (error.message.includes("ECONNREFUSED") || error.message.includes("ENOTFOUND")) {
+                errorMessage = "🌐 **Connection Error**\n\nUnable to connect to the AI service. Please check your internet connection and try again.";
+            } else if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+                errorMessage = "🔑 **Authentication Error**\n\nAPI authentication failed. Please contact the bot administrator.";
+            } else if (error.message.includes("429") || error.message.includes("rate limit")) {
+                errorMessage = "🚦 **Rate Limited**\n\nToo many requests. Please wait a moment before trying again.";
+            } else if (error.message.includes("500") || error.message.includes("502") || error.message.includes("503")) {
+                errorMessage = "🔧 **Server Error**\n\nThe AI service is experiencing technical difficulties. Please try again later.";
+            } else if (typeof error === 'object' && error && 'description' in error) {
+                errorMessage = error.description as string;
+            } else if (error.message) {
+                errorMessage = `❌ **Error:** ${error.message}`;
+            }
+        }
+
+        await ctx.reply(errorMessage, {
             reply_to_message_id: ctx.msg.message_id,
         });
     }
