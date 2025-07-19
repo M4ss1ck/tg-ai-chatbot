@@ -4,6 +4,7 @@ import aiCommands from "./composers/commands.js";
 import aiActions from "./composers/actions.js";
 import aiFilter from "./composers/filter.js";
 import start from "./composers/start.js";
+import premiumMiddleware from "./middlewares/premium.js";
 import { BotContext, initial } from "./context/botContext.js";
 import { storage } from "./storage/redis.js";
 
@@ -14,6 +15,7 @@ if (!token) {
 const bot = new Bot<BotContext>(token)
 
 bot.use(session({ initial, storage }));
+bot.use(premiumMiddleware);
 bot.use(start)
 bot.use(aiCommands)
 bot.use(aiActions)
