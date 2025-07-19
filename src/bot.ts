@@ -23,12 +23,34 @@ bot.use(aiCommands)
 bot.use(aiActions)
 bot.use(aiFilter)
 
-await aiCommands.setCommands(bot)
+// Try to set commands with retry logic
+const setCommandsWithRetry = async (retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+        try {
+            await aiCommands.setCommands(bot);
+            console.log("Bot commands set successfully");
+            return;
+        } catch (error) {
+            console.warn(`Failed to set commands (attempt ${i + 1}/${retries}):`, error instanceof Error ? error.message : error);
+            if (i === retries - 1) {
+                console.error("Failed to set commands after all retries. Bot will continue without command menu.");
+            } else {
+                // Wait before retry
+                await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
+            }
+        }
+    }
+};
+
+console.log("BOT STARTED")
 
 bot.start({
     allowed_updates: API_CONSTANTS.ALL_UPDATE_TYPES,
     drop_pending_updates: true,
 });
+
+// Set commands after bot starts
+setCommandsWithRetry();
 
 bot.catch((err) => {
     const ctx = err.ctx;
