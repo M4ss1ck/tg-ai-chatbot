@@ -6,6 +6,7 @@ export interface Model {
     name: string
     image: boolean
     premium: boolean
+    provider: string
 }
 
 export interface TextContent {
