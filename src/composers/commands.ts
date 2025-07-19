@@ -7,12 +7,34 @@ import { processCommand } from "../utils/ai.js";
 const aiCommands = new CommandGroup<BotContext>();
 
 aiCommands.command("model", "Select your AI model", async (ctx) => {
-    const text = "Select your AI model"
-    const buttons = aiModels.map((model, index) => [InlineKeyboard.text(model.name, `set_model_${index}`)])
-    const keyboard = InlineKeyboard.from(buttons)
-    await ctx.reply(text, {
+    const isPremium = ctx.session.isPremium;
+
+    // Sort models: free models first, then premium models
+    const freeModels = aiModels.filter(model => !model.premium);
+    const premiumModels = aiModels.filter(model => model.premium);
+    const sortedModels = [...freeModels, ...premiumModels];
+
+    const text = "Select your AI model";
+    const buttons = sortedModels.map((model) => {
+        // Find original index in aiModels array for callback data
+        const originalIndex = aiModels.findIndex(m => m.model === model.model);
+
+        // Add visual indicator for premium models
+        const modelName = model.premium ? `🔒 ${model.name} (Premium)` : model.name;
+
+        return [InlineKeyboard.text(modelName, `set_model_${originalIndex}`)];
+    });
+
+    const keyboard = InlineKeyboard.from(buttons);
+
+    // Add explanation for non-premium users
+    const explanation = isPremium
+        ? ""
+        : "\n\n🔒 Premium models require special access.";
+
+    await ctx.reply(text + explanation, {
         reply_markup: keyboard
-    })
+    });
 })
 
 aiCommands.command("info", "Show current AI model", async (ctx) => {
