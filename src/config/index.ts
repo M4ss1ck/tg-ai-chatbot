@@ -7,13 +7,13 @@ export const cloudflareApiToken = process.env.CLOUDFLARE_API_TOKEN;
 export const cloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 
 export const aiModels = [
-    {
-        model: "google/gemini-2.0-pro-exp-02-05:free",
-        name: "Gemini Pro 2.0 Experimental",
-        image: true,
-        premium: false,
-        provider: "openrouter"
-    },
+    // {
+    //     model: "google/gemini-2.0-pro-exp-02-05:free",
+    //     name: "Gemini Pro 2.0 Experimental",
+    //     image: true,
+    //     premium: false,
+    //     provider: "openrouter"
+    // },
     {
         model: "qwen/qwen2.5-vl-72b-instruct:free",
         name: "Qwen2.5 VL 72B Instruct",
@@ -35,23 +35,44 @@ export const aiModels = [
         premium: false,
         provider: "openrouter"
     },
+    // {
+    //     model: "google/gemini-2.0-flash-thinking-exp:free",
+    //     name: "Gemini 2.0 Flash Thinking Experimental 01-21",
+    //     image: true,
+    //     premium: false,
+    //     provider: "openrouter"
+    // },
+    // {
+    //     model: "@cf/google/gemma-3-12b-it",
+    //     name: "Cloudflare Gemma 3 12B",
+    //     image: false,
+    //     premium: true,
+    //     provider: "cloudflare"
+    // },
     {
-        model: "google/gemini-2.0-flash-thinking-exp:free",
-        name: "Gemini 2.0 Flash Thinking Experimental 01-21",
-        image: true,
-        premium: false,
-        provider: "openrouter"
-    },
-    {
-        model: "@cf/google/gemma-3-12b-it",
-        name: "Cloudflare Gemma 3 12B",
+        model: "@cf/meta/llama-4-scout-17b-16e-instruct",
+        name: "Cloudflare Llama 4 Scout 17B 16E Instruct",
         image: false,
         premium: true,
         provider: "cloudflare"
     },
     {
-        model: "@cf/meta/llama-4-scout-17b-16e-instruct",
-        name: "Cloudflare Llama 4 Scout 17B 16E Instruct",
+        model: "@cf/qwen/qwq-32b",
+        name: "Cloudflare Qwen 32B",
+        image: false,
+        premium: true,
+        provider: "cloudflare"
+    },
+    {
+        model: "@cf/mistralai/mistral-small-3.1-24b-instruct",
+        name: "Cloudflare Mistral Small 3.1 24B Instruct",
+        image: false,
+        premium: true,
+        provider: "cloudflare"
+    },
+    {
+        model: "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
+        name: "Cloudflare DeepSeek R1 Distill Qwen 32B",
         image: false,
         premium: true,
         provider: "cloudflare"
