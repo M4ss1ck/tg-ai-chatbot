@@ -30,6 +30,7 @@ interface SessionData {
     availableModels: Model[]
     history: Message[]
     initialPrompt: Message
+    isPremium: boolean
 }
 
 export type BotContext = Context & SessionFlavor<SessionData>;
@@ -42,6 +43,7 @@ export function initial(): SessionData {
         initialPrompt: {
             role: "system",
             content: aiPrompts[0].text
-        }
+        },
+        isPremium: false
     }
 } 
