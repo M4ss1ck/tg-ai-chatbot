@@ -82,7 +82,9 @@ export const processCommand = async (ctx: BotContext, message: string) => {
             search += "\n" + ctx.msg.reply_to_message.caption;
         }
     }
-    const sanitizedInput = encodeURIComponent(search);
+    // const sanitizedInput = encodeURIComponent(search);
+    const sanitizedInput = search; // No encoding as it causes issue with the response.
+
     try {
         let content: any[] = [{
             type: "text",
@@ -218,24 +220,11 @@ export const processCommand = async (ctx: BotContext, message: string) => {
                 }
 
                 // Cloudflare API structure
-                apiUrl = `https://api.cloudflare.com/client/v4/accounts/${cloudflareAccountId}/ai/run/${currentModel}`;
+                apiUrl = `https://api.cloudflare.com/client/v4/accounts/${cloudflareAccountId}/ai/v1/chat/completions`;
                 headers = {
                     "Authorization": `Bearer ${cloudflareApiToken}`,
                     "Content-Type": "application/json"
                 };
-
-                // Cloudflare doesn't include model in request body, only messages
-                requestBody = {
-                    messages: [
-                        ...ctx.session.history,
-                        {
-                            role: "user",
-                            content,
-                        }
-                    ]
-                };
-
-                console.log(`Using Cloudflare model: ${currentModel}`);
             } else {
                 // Default to OpenRouter API
                 apiUrl = "https://openrouter.ai/api/v1/chat/completions";
@@ -243,18 +232,20 @@ export const processCommand = async (ctx: BotContext, message: string) => {
                     "Authorization": `Bearer ${apiKey}`,
                     "Content-Type": "application/json"
                 };
-
-                requestBody = {
-                    model: currentModel,
-                    messages: [
-                        ...ctx.session.history,
-                        {
-                            role: "user",
-                            content,
-                        }
-                    ]
-                };
             }
+
+            requestBody = {
+                model: currentModel,
+                messages: [
+                    ...ctx.session.history,
+                    {
+                        role: "user",
+                        content,
+                    }
+                ]
+            };
+
+            console.log(`Making API request to ${currentProvider} with model: ${currentModel}`);
 
             return await axios.post(apiUrl, requestBody, {
                 headers,
@@ -270,6 +261,12 @@ export const processCommand = async (ctx: BotContext, message: string) => {
             res = await attemptApiCall(model, provider);
         } catch (error) {
             console.error(`Primary model ${model} failed:`, error);
+
+            // Log additional error details for debugging
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosError = error as any;
+                console.error('Error response data:', JSON.stringify(axiosError.response?.data, null, 2));
+            }
 
             // Attempt fallback to a free model if the current model is premium and failed
             if (modelObj?.premium && !fallbackAttempted) {
@@ -322,11 +319,30 @@ export const processCommand = async (ctx: BotContext, message: string) => {
             }
         }
 
-        const aiResponse = res.data?.choices?.[0]?.message?.content;
+        // console.log("API Response received:", JSON.stringify(res.data, null, 2));
+
+        let aiResponse: string | undefined;
+
+        // Handle different response structures based on provider
+        if (finalProvider === "cloudflare") {
+            // Cloudflare API response structure - try multiple possible paths
+            aiResponse = res.data?.result?.response ||
+                res.data?.response ||
+                res.data?.result?.content ||
+                res.data?.content ||
+                res.data?.choices?.[0]?.message?.content; // Fallback to OpenRouter structure
+        } else {
+            // OpenRouter API response structure
+            aiResponse = res.data?.choices?.[0]?.message?.content;
+        }
+
         console.log("\n===========================\n")
         console.log(aiResponse)
 
         if (!aiResponse || typeof aiResponse !== 'string') {
+            console.log("Full response data:", JSON.stringify(res.data, null, 2));
+            console.log("Response status:", res.status);
+            console.log("Response headers:", res.headers);
             throw new Error("No response from AI model. The service may be temporarily unavailable.");
         }
 
