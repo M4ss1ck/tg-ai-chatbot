@@ -49,6 +49,13 @@ export const aiModels = [
         premium: true,
         provider: "cloudflare"
     },
+    {
+        model: "@cf/meta/llama-4-scout-17b-16e-instruct",
+        name: "Cloudflare Llama 4 Scout 17B 16E Instruct",
+        image: false,
+        premium: true,
+        provider: "cloudflare"
+    }
 ]
 
 export const aiPrompts = [
