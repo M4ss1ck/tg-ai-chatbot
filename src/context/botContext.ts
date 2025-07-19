@@ -5,6 +5,7 @@ export interface Model {
     model: string
     name: string
     image: boolean
+    premium: boolean
 }
 
 export interface TextContent {
